@@ -1,0 +1,6 @@
+{
+  "name": "3D Factory - Impresión 3D & Corte Láser",
+  "description": "Servicio profesional de manufactura digital: impresión 3D FDM y corte/grabado láser con visor multi-formato interactivo (STL, OBJ, DXF, SVG) y cotizador en tiempo real.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

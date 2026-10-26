@@ -1,0 +1,1886 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Factory | Impresión 3D FDM & Corte y Grabado Láser</title>
+    
+    <!-- Ícono de pestaña -->
+    <link rel="icon" type="image/png" href="logo.png">
+
+    <!-- SEO & Redes Sociales -->
+    <meta name="description" content="3D Factory - Imprimimos tus diseños. Servicio profesional de impresión 3D FDM y corte/grabado láser con visor multi-formato interactivo.">
+    <meta name="keywords" content="impresion 3d, 3d factory, corte laser, grabado laser, visor dxf, visor stl, visor obj, visor pdf">
+    <meta property="og:title" content="3D Factory | Imprimimos tus diseños">
+    <meta property="og:description" content="Sube tu modelo 3D o plano de corte (.STL, .OBJ, .3MF, .DXF, .PDF) e inspecciónalo en vivo.">
+    <meta property="og:image" content="logo.png">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            cyan: '#06b6d4',
+                            laser: '#f97316',
+                            purple: '#a855f7',
+                            dark: '#0f172a',
+                            darker: '#020617',
+                            card: '#1e293b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- LIBRERÍAS THREE.JS + LOADERS 3D -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/3MFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <!-- LIBRERÍA DXF PARSER -->
+    <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js"></script>
+
+    <style>
+        .glow-cyan:hover {
+            box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.4);
+        }
+        .glow-laser:hover {
+            box-shadow: 0 0 25px -5px rgba(249, 115, 22, 0.4);
+        }
+        #viewerCanvasContainer canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+            outline: none;
+            cursor: grab;
+        }
+        #viewerCanvasContainer canvas:active {
+            cursor: grabbing;
+        }
+        #svgContainer svg {
+            max-width: 90%;
+            max-height: 240px;
+            filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.8));
+        }
+        #svgContainer svg * {
+            stroke: #f97316 !important;
+            stroke-width: 2px !important;
+            fill: rgba(249, 115, 22, 0.08) !important;
+        }
+    </style>
+</head>
+<body class="bg-brand-darker text-slate-200 font-sans antialiased selection:bg-brand-cyan selection:text-brand-darker">
+
+    <!-- BOTÓN FLOTANTE PERMANENTE DE WHATSAPP -->
+    <div class="fixed bottom-6 right-6 z-50 flex items-center group">
+        <div class="hidden sm:flex mr-3 bg-slate-900/90 text-white text-xs px-3.5 py-2 rounded-xl shadow-2xl border border-slate-700/80 backdrop-blur-md items-center gap-2 transition-all opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 pointer-events-none">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>¿Dudas con tu diseño? <strong>Escríbenos en vivo</strong></span>
+        </div>
+        <a href="https://wa.me/5215577981060?text=%C2%A1Hola%203D%20Factory!%20Tengo%20una%20duda%20sobre%20un%20archivo%20o%20dise%C3%B1o..." target="_blank" rel="noopener noreferrer" class="relative w-14 h-14 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-full flex items-center justify-center text-2xl shadow-2xl shadow-emerald-950 transition-all transform hover:scale-110 active:scale-95" aria-label="Contactar por WhatsApp">
+            <span class="absolute inset-0 rounded-full bg-emerald-400 opacity-75 animate-ping pointer-events-none"></span>
+            <i class="fa-brands fa-whatsapp relative z-10"></i>
+        </a>
+    </div>
+
+    <!-- BARRA DE NAVEGACIÓN -->
+    <header class="fixed w-full top-0 z-40 bg-brand-darker/90 backdrop-blur-md border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            
+            <a href="#" class="flex items-center gap-3 group">
+                <img src="logo.png" alt="Logo 3D Factory" class="h-12 w-12 object-contain drop-shadow-md rounded-xl transition-transform group-hover:scale-105">
+                <div class="flex flex-col">
+                    <span class="text-xl sm:text-2xl font-black tracking-wider text-white leading-tight">3D <span class="text-brand-cyan">FACTORY</span></span>
+                    <span class="text-[10px] tracking-widest uppercase text-slate-400 font-semibold">Imprimimos tus diseños</span>
+                </div>
+            </a>
+
+            <nav class="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-300">
+                <a href="#servicios" class="hover:text-brand-cyan transition-colors">Servicios</a>
+                <a href="#materiales" class="hover:text-brand-cyan transition-colors">Materiales</a>
+                <a href="#proceso" class="hover:text-brand-cyan transition-colors">Proceso</a>
+                <a href="#faq" class="hover:text-brand-cyan transition-colors">FAQ</a>
+                <a href="#cotizador" class="px-5 py-2.5 rounded-full bg-gradient-to-r from-brand-cyan to-blue-600 text-white font-bold hover:opacity-90 transition-all shadow-md hover:shadow-cyan-500/20">
+                    <i class="fa-solid fa-cube mr-2"></i>Visualizador & Cotizar
+                </a>
+            </nav>
+
+            <button id="mobileMenuBtn" class="md:hidden text-2xl text-slate-300 focus:outline-none" aria-label="Abrir Menú">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+
+        <div id="mobileMenu" class="hidden md:hidden bg-brand-card border-b border-slate-800 px-6 py-4 space-y-4">
+            <a href="#servicios" class="block text-slate-300 hover:text-brand-cyan font-medium">Servicios</a>
+            <a href="#materiales" class="block text-slate-300 hover:text-brand-cyan font-medium">Materiales</a>
+            <a href="#proceso" class="block text-slate-300 hover:text-brand-cyan font-medium">Proceso</a>
+            <a href="#faq" class="block text-slate-300 hover:text-brand-cyan font-medium">FAQ</a>
+            <a href="#cotizador" class="block text-center py-2.5 rounded-xl bg-brand-cyan text-brand-darker font-bold">Visualizador & Cotizar</a>
+        </div>
+    </header>
+
+    <!-- HERO SECTION -->
+    <section class="relative pt-32 pb-20 md:pt-44 md:pb-32 overflow-hidden">
+        <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-brand-cyan/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute top-1/3 right-10 w-80 h-80 bg-brand-laser/15 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+            
+            <div class="flex justify-center mb-6">
+                <img src="logo.png" alt="3D Factory" class="w-24 h-24 sm:w-28 sm:h-28 object-contain drop-shadow-2xl animate-pulse">
+            </div>
+
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-950/40 text-brand-cyan text-xs font-semibold mb-6 uppercase tracking-wider">
+                <span class="w-2 h-2 rounded-full bg-brand-cyan animate-pulse"></span>
+                Visor Interactivo Multi-Formato 3D & Láser
+            </div>
+
+            <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-tight max-w-4xl mx-auto">
+                Tus ideas hechas realidad en <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-cyan to-blue-400">3D FDM</span> y <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-laser to-amber-400">Láser</span>
+            </h1>
+
+            <p class="mt-6 text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                Sube tu archivo 3D (<strong>STL, OBJ, 3MF, GLB</strong>) o plano de corte (<strong>DXF, SVG, PDF</strong>) para inspeccionarlo en pantalla y cotizar de inmediato.
+            </p>
+
+            <div class="mt-10 flex flex-wrap justify-center gap-4">
+                <a href="#cotizador" class="px-8 py-4 rounded-xl bg-gradient-to-r from-brand-cyan to-blue-600 text-white font-bold text-lg hover:scale-105 transition-all shadow-xl shadow-cyan-500/25 flex items-center gap-3">
+                    <i class="fa-solid fa-cube"></i>
+                    Probar Visor & Cotizar
+                </a>
+                <a href="#materiales" class="px-8 py-4 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-white font-semibold text-lg transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-layer-group text-brand-cyan"></i>
+                    Ver Materiales
+                </a>
+            </div>
+
+            <!-- Métricas Clave -->
+            <div class="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto border-t border-slate-800/80 pt-10">
+                <div>
+                    <p class="text-3xl font-black text-white">0.05 mm</p>
+                    <p class="text-xs uppercase tracking-wider text-slate-400 mt-1">Precisión de Capa</p>
+                </div>
+                <div>
+                    <p class="text-3xl font-black text-brand-cyan">100+ W</p>
+                    <p class="text-xs uppercase tracking-wider text-slate-400 mt-1">Potencia Láser CO2</p>
+                </div>
+                <div>
+                    <p class="text-3xl font-black text-brand-laser">24-48 hrs</p>
+                    <p class="text-xs uppercase tracking-wider text-slate-400 mt-1">Tiempos de Entrega</p>
+                </div>
+                <div>
+                    <p class="text-3xl font-black text-white">100%</p>
+                    <p class="text-xs uppercase tracking-wider text-slate-400 mt-1">Garantía de Calidad</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SERVICIOS -->
+    <section id="servicios" class="py-24 bg-brand-dark">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="text-brand-cyan font-bold tracking-widest text-sm uppercase">Nuestras Capacidades</h2>
+                <p class="text-3xl sm:text-4xl font-extrabold text-white mt-2">Tecnología lista para fabricar tu proyecto</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="bg-brand-card rounded-2xl p-8 border border-slate-800 transition-all glow-cyan relative overflow-hidden group">
+                    <div class="w-14 h-14 rounded-xl bg-cyan-950/70 text-brand-cyan flex items-center justify-center text-2xl mb-6 border border-cyan-500/20 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-shapes"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-3">Impresión 3D FDM</h3>
+                    <p class="text-slate-400 mb-6 leading-relaxed">
+                        Fabricación aditiva por filamento fundido. Prototipos funcionales, repuestos mecánicos, carcasas electrónicas y piezas técnicas con acabados de alta definición.
+                    </p>
+                    <ul class="space-y-3 text-sm text-slate-300">
+                        <li class="flex items-center gap-2"><i class="fa-solid fa-check text-brand-cyan"></i> Formatos admitidos: STL, OBJ, 3MF, STEP, GLB, GLTF.</li>
+                        <li class="flex items-center gap-2"><i class="fa-solid fa-check text-brand-cyan"></i> Materiales: PLA, PETG, ABS, ASA, TPU Flexible y Nylon Fibra de Carbono.</li>
+                        <li class="flex items-center gap-2"><i class="fa-solid fa-check text-brand-cyan"></i> Volumen de impresión de hasta 350 x 350 x 400 mm.</li>
+                    </ul>
+                </div>
+
+                <div class="bg-brand-card rounded-2xl p-8 border border-slate-800 transition-all glow-laser relative overflow-hidden group">
+                    <div class="w-14 h-14 rounded-xl bg-orange-950/70 text-brand-laser flex items-center justify-center text-2xl mb-6 border border-orange-500/20 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-crosshairs"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-3">Corte y Grabado Láser</h3>
+                    <p class="text-slate-400 mb-6 leading-relaxed">
+                        Corte de alta velocidad con cantos pulidos y grabado superficial milimétrico para señalética, empaques, maquetas, acrílicos y personalización de artículos.
+                    </p>
+                    <ul class="space-y-3 text-sm text-slate-300">
+                        <li class="flex items-center gap-2"><i class="fa-solid fa-check text-brand-laser"></i> Formatos admitidos: DXF, SVG, PDF vectorial, AI e imágenes para grabado.</li>
+                        <li class="flex items-center gap-2"><i class="fa-solid fa-check text-brand-laser"></i> Corte en Acrílico, MDF, Madera, Triplay, Cuero y Cartón.</li>
+                        <li class="flex items-center gap-2"><i class="fa-solid fa-check text-brand-laser"></i> Área de trabajo de hasta 1300 x 900 mm.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- MATERIALES COMPATIBLES -->
+    <section id="materiales" class="py-20 border-t border-slate-800 bg-brand-darker">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-white">Catálogo de Materiales Populares</h2>
+                <p class="text-slate-400 mt-2">Materia prima de grado técnico garantizada para cada uso</p>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div class="bg-brand-card/60 p-4 rounded-xl border border-slate-800 text-center">
+                    <span class="block text-xl font-bold text-brand-cyan mb-1">PLA / PLA+</span>
+                    <span class="text-xs text-slate-400">Prototipado rápido y visual</span>
+                </div>
+                <div class="bg-brand-card/60 p-4 rounded-xl border border-slate-800 text-center">
+                    <span class="block text-xl font-bold text-brand-cyan mb-1">PETG</span>
+                    <span class="text-xs text-slate-400">Resistente a la intemperie y golpes</span>
+                </div>
+                <div class="bg-brand-card/60 p-4 rounded-xl border border-slate-800 text-center">
+                    <span class="block text-xl font-bold text-brand-laser mb-1">Acrílico</span>
+                    <span class="text-xs text-slate-400">Cristal o colores (2mm a 10mm)</span>
+                </div>
+                <div class="bg-brand-card/60 p-4 rounded-xl border border-slate-800 text-center">
+                    <span class="block text-xl font-bold text-brand-laser mb-1">MDF / Madera</span>
+                    <span class="text-xs text-slate-400">Maquetas, cajas y letreros</span>
+                </div>
+                <div class="bg-brand-card/60 p-4 rounded-xl border border-slate-800 text-center">
+                    <span class="block text-xl font-bold text-brand-laser mb-1">Cuero / Piel</span>
+                    <span class="text-xs text-slate-400">Grabado profundo y artículos</span>
+                </div>
+                <div class="bg-brand-card/60 p-4 rounded-xl border border-slate-800 text-center">
+                    <span class="block text-xl font-bold text-brand-cyan mb-1">TPU</span>
+                    <span class="text-xs text-slate-400">Goma elástica y fundas</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- COTIZADOR CON VISUALIZADOR MULTI-FORMATO -->
+    <section id="cotizador" class="py-24 bg-gradient-to-b from-brand-dark to-brand-darker relative">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-10">
+                <span class="px-4 py-1 rounded-full bg-brand-cyan/10 border border-brand-cyan/30 text-brand-cyan text-xs font-bold uppercase tracking-wider">
+                    Visualizador Interactivo & Cotizador
+                </span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mt-3">Inspecciona y Cotiza tu Archivo</h2>
+                <p class="text-slate-400 mt-2">Carga tu modelo <strong>3D (.STL, .OBJ, .3MF, .GLB)</strong> o plano de <strong>Corte Láser (.DXF, .SVG, .PDF, Imágenes)</strong>.</p>
+            </div>
+
+            <div class="bg-brand-card rounded-3xl border border-slate-700/80 p-6 sm:p-10 shadow-2xl backdrop-blur-xl relative">
+                
+                <form id="quoteForm" onsubmit="event.preventDefault(); sendViaSplitForms();" class="space-y-6">
+
+                    <!-- 1. Tipo de Servicio -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">1. Tipo de Fabricación</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <label class="flex items-center gap-3 p-4 rounded-xl border border-slate-700 cursor-pointer hover:border-brand-cyan transition bg-slate-900/60 has-[:checked]:border-brand-cyan has-[:checked]:bg-cyan-950/20">
+                                <input type="radio" name="servicio" value="Impresion 3D FDM" checked class="text-brand-cyan focus:ring-0" onchange="updateServiceUI()">
+                                <div>
+                                    <div class="font-bold text-white text-sm flex items-center gap-2">
+                                        <i class="fa-solid fa-cube text-brand-cyan"></i> Impresión 3D FDM
+                                    </div>
+                                    <div class="text-[11px] text-slate-400">Visor 3D: STL, OBJ, 3MF, GLB, GLTF</div>
+                                </div>
+                            </label>
+
+                            <label class="flex items-center gap-3 p-4 rounded-xl border border-slate-700 cursor-pointer hover:border-brand-laser transition bg-slate-900/60 has-[:checked]:border-brand-laser has-[:checked]:bg-orange-950/20">
+                                <input type="radio" name="servicio" value="Corte / Grabado Laser" class="text-brand-laser focus:ring-0" onchange="updateServiceUI()">
+                                <div>
+                                    <div class="font-bold text-white text-sm flex items-center gap-2">
+                                        <i class="fa-solid fa-wand-magic-sparkles text-brand-laser"></i> Corte / Grabado Láser
+                                    </div>
+                                    <div class="text-[11px] text-slate-400">Visor Láser: DXF, SVG, PDF, Imágenes</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 2. Zona de Carga de Archivos con FILTRO INTELIGENTE -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">2. Cargar Archivo del Modelo o Vector</label>
+                        
+                        <div id="dropZone" class="relative border-2 border-dashed border-slate-600 hover:border-brand-cyan rounded-2xl p-8 text-center cursor-pointer transition-colors bg-slate-900/40 group">
+                            <input type="file" id="fileInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" accept=".stl,.obj,.3mf,.step,.stp,.glb,.gltf" onchange="handleFileSelect(event)">
+                            
+                            <div id="dropZonePrompt">
+                                <div class="w-16 h-16 rounded-2xl bg-slate-800 text-brand-cyan group-hover:scale-110 transition-transform flex items-center justify-center mx-auto mb-4 text-2xl border border-slate-700" id="dropZoneIcon">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                                </div>
+                                <p class="text-sm font-semibold text-white">Haz clic para buscar o arrastra tu archivo aquí</p>
+                                <p id="fileFormatHint" class="text-xs text-slate-400 mt-1">Archivos 3D admitidos: .STL, .OBJ, .3MF, .GLB, .GLTF, .STEP (Hasta 100 MB)</p>
+                            </div>
+
+                            <!-- Barra de archivo cargado -->
+                            <div id="filePreview" class="hidden flex items-center justify-between bg-slate-800/90 border border-slate-700 rounded-xl p-4 text-left">
+                                <div class="flex items-center gap-3 overflow-hidden">
+                                    <div class="w-10 h-10 rounded-lg bg-cyan-950 text-brand-cyan flex items-center justify-center text-lg flex-shrink-0" id="filePreviewIcon">
+                                        <i class="fa-solid fa-cube"></i>
+                                    </div>
+                                    <div class="truncate">
+                                        <p id="fileName" class="text-sm font-bold text-white truncate">archivo.stl</p>
+                                        <p id="fileSize" class="text-xs text-slate-400">0.00 MB</p>
+                                    </div>
+                                </div>
+                                <button type="button" onclick="removeSelectedFile(event)" class="text-slate-400 hover:text-red-400 p-2 text-sm transition-colors z-20" title="Eliminar archivo">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- VISUALIZADOR MULTI-FORMATO (3D, DXF, SVG, PDF, IMÁGENES) -->
+                        <div id="viewerWrapper" class="hidden mt-4 relative bg-slate-950 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl">
+                            
+                            <!-- Barra superior del visor con controles -->
+                            <div class="flex flex-wrap items-center justify-between gap-2 p-3 bg-slate-900/90 border-b border-slate-800 text-xs">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                    <span class="font-bold text-white uppercase tracking-wider text-[11px]" id="viewerTitle">Visor Interactivo</span>
+                                </div>
+
+                                <div class="flex flex-wrap items-center gap-1.5" id="viewerControlsBar">
+                                    <!-- Botones de Zoom universales -->
+                                    <button type="button" onclick="zoomInUniversal()" title="Acercar" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold border border-slate-700 transition flex items-center gap-1">
+                                        <i class="fa-solid fa-magnifying-glass-plus text-brand-cyan"></i>
+                                        <span class="hidden sm:inline">Acercar</span>
+                                    </button>
+                                    <button type="button" onclick="zoomOutUniversal()" title="Alejar" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold border border-slate-700 transition flex items-center gap-1">
+                                        <i class="fa-solid fa-magnifying-glass-minus text-brand-cyan"></i>
+                                        <span class="hidden sm:inline">Alejar</span>
+                                    </button>
+
+                                    <!-- Controles específicos 3D -->
+                                    <div id="controls3DGroup" class="flex items-center gap-1.5">
+                                        <button type="button" onclick="toggleAutoRotate()" id="btnAutoRotate" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold border border-slate-700 transition">
+                                            <i class="fa-solid fa-rotate mr-1"></i> Auto-Giro
+                                        </button>
+                                        <button type="button" onclick="toggleWireframe()" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold border border-slate-700 transition">
+                                            <i class="fa-solid fa-border-all mr-1"></i> Malla
+                                        </button>
+                                    </div>
+
+                                    <!-- Centrar vista -->
+                                    <button type="button" onclick="resetUniversalView()" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold border border-slate-700 transition">
+                                        <i class="fa-solid fa-arrows-rotate mr-1"></i> Centrar
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Contenedor central de lienzos -->
+                            <div id="viewerCanvasContainer" class="w-full h-80 relative flex items-center justify-center bg-slate-950 overflow-hidden">
+                                
+                                <div id="viewerLoadingSpinner" class="hidden absolute inset-0 bg-slate-950/80 flex flex-col items-center justify-center gap-3 z-20">
+                                    <i class="fa-solid fa-circle-notch fa-spin text-3xl text-brand-cyan" id="spinnerIcon"></i>
+                                    <span class="text-xs font-semibold text-slate-300" id="spinnerText">Cargando modelo...</span>
+                                </div>
+
+                                <!-- Canvas 2D para planos DXF -->
+                                <canvas id="laserCanvas" class="hidden w-full h-full"></canvas>
+
+                                <!-- Contenedor SVG -->
+                                <div id="svgContainer" class="hidden w-full h-full p-6 flex items-center justify-center"></div>
+
+                                <!-- Contenedor PDF interactivo -->
+                                <div id="pdfContainer" class="hidden w-full h-full bg-slate-900 flex items-center justify-center relative">
+                                    <iframe id="pdfFrame" src="" class="w-full h-full border-0"></iframe>
+                                </div>
+
+                                <!-- Contenedor Imagen Grabado -->
+                                <div id="imgContainer" class="hidden w-full h-full p-6 flex items-center justify-center">
+                                    <img id="laserImgPreview" src="" alt="Grabado Láser" class="max-h-[240px] max-w-[90%] object-contain rounded-lg border border-slate-700 shadow-xl">
+                                </div>
+
+                                <!-- Botones flotantes rápidos de zoom -->
+                                <div class="absolute right-3 bottom-3 flex flex-col gap-1.5 z-10" id="floatingZoomButtons">
+                                    <button type="button" onclick="zoomInUniversal()" title="Acercar (+)" class="w-8 h-8 rounded-lg bg-slate-900/85 hover:bg-slate-800 text-brand-cyan border border-slate-700/80 flex items-center justify-center text-sm shadow-xl backdrop-blur transition active:scale-90">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
+                                    <button type="button" onclick="zoomOutUniversal()" title="Alejar (-)" class="w-8 h-8 rounded-lg bg-slate-900/85 hover:bg-slate-800 text-brand-cyan border border-slate-700/80 flex items-center justify-center text-sm shadow-xl backdrop-blur transition active:scale-90">
+                                        <i class="fa-solid fa-minus"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Barra inferior con datos de medidas -->
+                            <div id="modelStatsBar" class="p-3 bg-slate-900/90 border-t border-slate-800 grid grid-cols-2 sm:grid-cols-3 gap-2 text-center text-xs">
+                                <div class="bg-slate-950/60 p-2 rounded-lg border border-slate-800/80">
+                                    <span class="text-slate-400 block text-[10px] uppercase">Dimensiones</span>
+                                    <span id="statDimensions" class="font-bold text-brand-cyan text-xs">-- x -- mm</span>
+                                </div>
+                                <div class="bg-slate-950/60 p-2 rounded-lg border border-slate-800/80">
+                                    <span class="text-slate-400 block text-[10px] uppercase" id="statVolumeLabel">Volumen Real</span>
+                                    <span id="statVolume" class="font-bold text-white text-xs">-- cm³</span>
+                                </div>
+                                <div class="bg-slate-950/60 p-2 rounded-lg border border-slate-800/80 col-span-2 sm:col-span-1">
+                                    <span class="text-slate-400 block text-[10px] uppercase">Interacción</span>
+                                    <span class="font-semibold text-slate-300 text-[11px]" id="statHelpText">🖱️ Arrastra | Zoom con +/-</span>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- RECUADRO DE DESPLIEGUE: CATÁLOGO Y PROPIEDADES DE MATERIALES (ESTILO RELLENO 3D) -->
+                    <div>
+                        <details class="group bg-slate-900 border border-slate-700 rounded-xl overflow-hidden transition-all">
+                            <summary class="flex justify-between items-center px-4 py-3 cursor-pointer text-xs font-bold text-slate-300 hover:text-white select-none">
+                                <span class="flex items-center gap-2">
+                                    <i class="fa-solid fa-layer-group text-brand-cyan"></i>
+                                    <span>Catálogo y Propiedades de Materiales Disponibles (Clic para desplegar)</span>
+                                </span>
+                                <i class="fa-solid fa-chevron-down text-slate-400 text-xs transition-transform group-open:rotate-180"></i>
+                            </summary>
+                            
+                            <div class="p-4 border-t border-slate-800 bg-slate-950/70 text-xs text-slate-300 space-y-4">
+                                <!-- 3D FDM info -->
+                                <div>
+                                    <div class="text-[11px] font-bold text-brand-cyan uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-cube"></i> Materiales para Impresión 3D
+                                    </div>
+                                    <div class="grid sm:grid-cols-2 gap-2 text-[11px]">
+                                        <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
+                                            <strong class="text-white block font-bold">PLA / PLA+</strong>
+                                            <span class="text-slate-400">Económico, gran acabado estético y fácil de pintar. Para maquetas, figuras y prototipos visuales.</span>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
+                                            <strong class="text-white block font-bold">PETG Técnico</strong>
+                                            <span class="text-slate-400">Resistente a impactos, intemperie y humedad. Ideal para piezas mecánicas y uso exterior.</span>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
+                                            <strong class="text-white block font-bold">ABS / ASA Industrial</strong>
+                                            <span class="text-slate-400">Resiste calor hasta 95°C y rayos UV. Ideal para piezas automotrices y herramientas.</span>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
+                                            <strong class="text-white block font-bold">TPU Flexible</strong>
+                                            <span class="text-slate-400">Elástico tipo goma (dureza 95A). Para juntas, empaques, fundas y amortiguadores.</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Láser info -->
+                                <div class="pt-2 border-t border-slate-800/80">
+                                    <div class="text-[11px] font-bold text-brand-laser uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-wand-magic-sparkles"></i> Materiales para Corte y Grabado Láser
+                                    </div>
+                                    <div class="grid sm:grid-cols-2 gap-2 text-[11px]">
+                                        <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
+                                            <strong class="text-white block font-bold">MDF (3mm y 6mm)</strong>
+                                            <span class="text-slate-400">Madera prensada económica, corte nítido y superficie lisa para cajas, maquetas y recuerdos.</span>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
+                                            <strong class="text-white block font-bold">Acrílico Cristal 3mm</strong>
+                                            <span class="text-slate-400">Transparencia óptica del 92% con cantos pulidos al fuego por el haz láser. Letreros y vitrinas.</span>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
+                                            <strong class="text-white block font-bold">Acrílico Color / Espejo</strong>
+                                            <span class="text-slate-400">Negro piano, blanco o acabados espejo dorado/plata. Señalética de lujo y logos corporativos.</span>
+                                        </div>
+                                        <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
+                                            <strong class="text-white block font-bold">Grabado sobre Artículo Propio</strong>
+                                            <span class="text-slate-400">Grabado láser de alta resolución sobre termos de acero, madera, cuero o productos que proporciones.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+
+                    <!-- 3. Parámetros Técnicos 3D (DESPLEGABLE IDÉNTICO A RELLENO) -->
+                    <div id="params3D" class="grid sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">Filamento / Material 3D</label>
+                            <select id="material3D" onchange="recalculatePrice()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-brand-cyan">
+                                <option value="PLA Estándar" data-price="0.10">PLA / PLA+ (Prototipos, figuras y maquetas - Económico)</option>
+                                <option value="PETG Resistencia" data-price="0.13">PETG (Alta resistencia mecánica y a la intemperie)</option>
+                                <option value="ABS/ASA Industrial" data-price="0.15">ABS / ASA (Grado industrial, calor hasta 95°C y UV)</option>
+                                <option value="TPU Flexible" data-price="0.18">TPU Flexible (Goma elástica 95A, juntas y amortiguadores)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">Relleno (Infill) Deseado</label>
+                            <select id="infill3D" onchange="recalculatePrice()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-brand-cyan">
+                                <option value="15% (Visual)">15% - Decorativo / Visual (Ligero)</option>
+                                <option value="30% (Estándar)" selected>30% - Estándar funcional</option>
+                                <option value="60% (Reforzado)">60% - Reforzado para carga</option>
+                                <option value="100% (Sólido)">100% - Sólido estructural</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 3. Parámetros Técnicos Láser con SELECTOR DE CORTE / GRABADO / AMBOS -->
+                    <div id="paramsLaser" class="grid sm:grid-cols-2 gap-4 hidden">
+                        
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase">Tipo de Trabajo Láser</label>
+                            <div class="grid grid-cols-3 gap-3">
+                                <label class="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-700 cursor-pointer hover:border-brand-laser bg-slate-900/60 has-[:checked]:border-brand-laser has-[:checked]:bg-orange-950/30 transition text-center">
+                                    <input type="radio" name="laserMode" value="Solo Corte" checked class="text-brand-laser focus:ring-0 mb-1" onchange="updateLaserModeUI()">
+                                    <span class="text-xs font-bold text-white">✂️ Solo Corte</span>
+                                </label>
+                                <label class="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-700 cursor-pointer hover:border-brand-laser bg-slate-900/60 has-[:checked]:border-brand-laser has-[:checked]:bg-orange-950/30 transition text-center">
+                                    <input type="radio" name="laserMode" value="Solo Grabado" class="text-brand-laser focus:ring-0 mb-1" onchange="updateLaserModeUI()">
+                                    <span class="text-xs font-bold text-white">⚡ Solo Grabado</span>
+                                </label>
+                                <label class="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-700 cursor-pointer hover:border-brand-laser bg-slate-900/60 has-[:checked]:border-brand-laser has-[:checked]:bg-orange-950/30 transition text-center">
+                                    <input type="radio" name="laserMode" value="Corte y Grabado" class="text-brand-laser focus:ring-0 mb-1" onchange="updateLaserModeUI()">
+                                    <span class="text-xs font-bold text-white">✂️⚡ Ambos</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- PANEL DESPLEGABLE DE COLORES Y ESPECIFICACIÓN -->
+                        <div id="laserColorGuideBox" class="sm:col-span-2 hidden bg-slate-950/80 p-4 rounded-2xl border border-orange-500/40 space-y-3">
+                            <div class="flex items-center gap-2 text-xs font-bold text-brand-laser uppercase tracking-wider">
+                                <i class="fa-solid fa-palette"></i> Guía de Colores para Corte y Grabado
+                            </div>
+                            
+                            <div class="grid sm:grid-cols-2 gap-2 text-xs">
+                                <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-2.5">
+                                    <span class="w-4 h-4 rounded-full bg-red-600 border border-white/40 shadow-[0_0_8px_rgba(239,68,68,0.8)] flex-shrink-0"></span>
+                                    <div>
+                                        <strong class="text-white block font-bold">Líneas en ROJO:</strong>
+                                        <span class="text-slate-400 text-[11px]">Se interpretan como CORTE exterior / orificios</span>
+                                    </div>
+                                </div>
+                                <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-2.5">
+                                    <span class="w-4 h-4 rounded-full bg-black border border-slate-400 shadow-[0_0_8px_rgba(255,255,255,0.2)] flex-shrink-0"></span>
+                                    <div>
+                                        <strong class="text-white block font-bold">Líneas / Rellenos en NEGRO:</strong>
+                                        <span class="text-slate-400 text-[11px]">Se interpretan como GRABADO superficial</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-300 mb-1">
+                                    Especifica qué partes se cortan y cuáles se graban (o indica tus propios colores):
+                                </label>
+                                <textarea id="laserColorNotes" rows="2" placeholder="Ej. El contorno exterior y los agujeros van en corte (rojo), el logo y el texto van en grabado (negro)..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-brand-laser placeholder-slate-600"></textarea>
+                                <span class="text-[10px] text-slate-400 mt-1 block">
+                                    💡 <em>Nota: Si en tu archivo de Illustrator, Corel o AutoCAD usaste otros colores, descríbelos aquí arriba para configurarlos correctamente en la máquina láser.</em>
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- DESPLEGABLE DE MATERIAL LÁSER (IDÉNTICO A RELLENO) -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">Material Láser</label>
+                            <select id="materialLaser" onchange="recalculatePrice()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-brand-laser">
+                                <option value="MDF 3mm" data-factor="1.0">MDF 3mm (Madera prensada económica para maquetas y cajas)</option>
+                                <option value="MDF 6mm" data-factor="1.6">MDF 6mm (Mayor rigidez y resistencia para muebles y bases)</option>
+                                <option value="Acrílico 3mm Cristal" data-factor="2.8">Acrílico 3mm Cristal (Transparente óptico 92% con cantos pulidos)</option>
+                                <option value="Acrílico 3mm Color" data-factor="3.4">Acrílico 3mm Color / Espejo (Colores sólidos y acabado espejo)</option>
+                                <option value="Grabado en Termo/Metal" data-factor="2.0">Grabado en Termo / Metal (Personalización sobre tu artículo)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">Dimensiones detectadas (Largo x Ancho en cm)</label>
+                            <input type="text" id="dimensionsLaser" placeholder="Ej: 20 x 15 cm" oninput="recalculatePrice()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-brand-laser">
+                        </div>
+                    </div>
+
+                    <!-- Datos del Cliente -->
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">Tu Nombre Completo *</label>
+                            <input type="text" id="clientName" required placeholder="Ej. Mariana Torres" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-brand-cyan">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">Correo Electrónico (Para recibir respuesta) *</label>
+                            <input type="email" id="clientEmail" required placeholder="tu@correo.com" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-brand-cyan">
+                        </div>
+                    </div>
+
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">Cantidad de Piezas</label>
+                            <input type="number" id="quantity" value="1" min="1" max="500" oninput="recalculatePrice()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-brand-cyan">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">Teléfono / WhatsApp de Contacto</label>
+                            <input type="tel" id="clientPhone" placeholder="Ej. 55 1234 5678" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-brand-cyan">
+                        </div>
+                    </div>
+
+                    <!-- Notas adicionales -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Instrucciones o Color Preferido</label>
+                        <textarea id="projectNotes" rows="2" placeholder="Ej. Color negro mate, tolerancias específicas..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-brand-cyan placeholder-slate-600"></textarea>
+                    </div>
+
+                    <!-- Notificación de estado de envío -->
+                    <div id="statusMessage" class="hidden p-4 rounded-xl text-sm font-semibold text-center transition-all"></div>
+
+                    <!-- TOTAL ESTIMADO & BOTONES DE ENVÍO -->
+                    <div class="bg-slate-950 rounded-2xl p-6 border border-slate-800 flex flex-col lg:flex-row items-center justify-between gap-6">
+                        <div>
+                            <span class="text-xs uppercase text-slate-400 font-bold tracking-wider">Presupuesto Base Estimado:</span>
+                            <div class="text-3xl font-extrabold text-white mt-1">
+                                $<span id="calculatedPrice">95.00</span> <span class="text-sm font-semibold text-slate-400">MXN</span>
+                            </div>
+                            
+                            <!-- ESTIMADOR DE TIEMPO DE ENTREGA EN VIVO -->
+                            <div class="mt-2.5 flex items-center gap-2 text-xs text-slate-300 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800/80 w-fit">
+                                <i class="fa-solid fa-stopwatch text-brand-laser"></i>
+                                <span>Entrega estimada: <strong id="deliveryEstimate" class="text-emerald-400 font-bold">24 a 48 horas (Producción Express)</strong></span>
+                            </div>
+
+                            <span class="text-[11px] text-slate-500 block mt-1.5">* El precio exacto se confirma al inspeccionar la geometría del archivo.</span>
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+                            <!-- Botón 1: SplitForms API -->
+                            <button type="submit" id="btnSubmitEmail" class="px-6 py-3.5 rounded-xl bg-gradient-to-r from-brand-cyan to-blue-600 hover:opacity-90 text-white font-bold text-sm transition shadow-lg shadow-cyan-950 flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-paper-plane"></i>
+                                Enviar por Correo con Archivo
+                            </button>
+
+                            <!-- Botón 2: Cotizar por WhatsApp -->
+                            <button type="button" onclick="sendViaWhatsApp()" class="px-6 py-3.5 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-sm transition shadow-lg shadow-emerald-950 flex items-center justify-center gap-2">
+                                <i class="fa-brands fa-whatsapp text-lg"></i>
+                                Cotizar por WhatsApp
+                            </button>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- PROCESO DE TRABAJO -->
+    <section id="proceso" class="py-20 bg-brand-darker border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-brand-cyan font-bold tracking-widest text-sm uppercase">Paso a Paso</h2>
+                <p class="text-3xl font-extrabold text-white mt-2">¿Cómo trabajamos tu pedido?</p>
+            </div>
+
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="bg-brand-card/40 p-6 rounded-2xl border border-slate-800">
+                    <span class="text-4xl font-black text-slate-700 mb-4 block">01</span>
+                    <h3 class="text-lg font-bold text-white mb-2">Envío de Diseño</h3>
+                    <p class="text-sm text-slate-400">Sube tu archivo 3D o plano vectorial en el cotizador, míralo en el visor y envíalo directo.</p>
+                </div>
+                <div class="bg-brand-card/40 p-6 rounded-2xl border border-slate-800">
+                    <span class="text-4xl font-black text-slate-700 mb-4 block">02</span>
+                    <h3 class="text-lg font-bold text-white mb-2">Validación Técnica</h3>
+                    <p class="text-sm text-slate-400">Comprobamos tolerancias, grosor de paredes y te confirmamos costo final y tiempos exactos.</p>
+                </div>
+                <div class="bg-brand-card/40 p-6 rounded-2xl border border-slate-800">
+                    <span class="text-4xl font-black text-slate-700 mb-4 block">03</span>
+                    <h3 class="text-lg font-bold text-white mb-2">Fabricación</h3>
+                    <p class="text-sm text-slate-400">Producimos tu pieza con calibración estricta de temperatura, velocidad y potencia.</p>
+                </div>
+                <div class="bg-brand-card/40 p-6 rounded-2xl border border-slate-800">
+                    <span class="text-4xl font-black text-slate-700 mb-4 block">04</span>
+                    <h3 class="text-lg font-bold text-white mb-2">Control & Entrega</h3>
+                    <p class="text-sm text-slate-400">Inspeccionamos acabados, empaquetamos con protección y despachamos a tu domicilio.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PREGUNTAS FRECUENTES -->
+    <section id="faq" class="py-20 bg-brand-dark border-t border-slate-800">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold text-white text-center mb-12">Preguntas Frecuentes</h2>
+
+            <div class="space-y-4">
+                <details class="group bg-brand-card p-6 rounded-xl border border-slate-800 cursor-pointer">
+                    <summary class="flex justify-between items-center font-semibold text-white">
+                        ¿Qué formatos de archivo puedo visualizar en 3D y Láser?
+                        <i class="fa-solid fa-chevron-down group-open:rotate-180 transition-transform text-brand-cyan"></i>
+                    </summary>
+                    <p class="mt-4 text-sm text-slate-400 leading-relaxed">
+                        Para **Impresión 3D** puedes visualizar modelos **`.STL`, `.OBJ`, `.3MF`, `.GLB` y `.GLTF`** en 3D interactivo 360°. Para **Corte y Grabado Láser** puedes visualizar planos vectoriales **`.DXF`**, **`.SVG`**, **`.PDF`** e imágenes para grabado (**`.PNG`**, **`.JPG`**).
+                    </p>
+                </details>
+
+                <details class="group bg-brand-card p-6 rounded-xl border border-slate-800 cursor-pointer">
+                    <summary class="flex justify-between items-center font-semibold text-white">
+                        ¿Hacen diseño si no tengo el archivo listo?
+                        <i class="fa-solid fa-chevron-down group-open:rotate-180 transition-transform text-brand-cyan"></i>
+                    </summary>
+                    <p class="mt-4 text-sm text-slate-400 leading-relaxed">
+                        ¡Sí! Si solo cuentas con bocetos, medidas o una pieza de muestra que quieras replicar, brindamos modelado CAD y vectorizado profesional.
+                    </p>
+                </details>
+
+                <details class="group bg-brand-card p-6 rounded-xl border border-slate-800 cursor-pointer">
+                    <summary class="flex justify-between items-center font-semibold text-white">
+                        ¿Cuál es el pedido mínimo?
+                        <i class="fa-solid fa-chevron-down group-open:rotate-180 transition-transform text-brand-cyan"></i>
+                    </summary>
+                    <p class="mt-4 text-sm text-slate-400 leading-relaxed">
+                        Fabricamos desde 1 pieza unitaria (ideal para prototipos e inventores) hasta producciones de cientos de unidades para empresas.
+                    </p>
+                </details>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="bg-brand-darker border-t border-slate-800 py-12 text-slate-500 text-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+            
+            <div class="flex items-center gap-3">
+                <img src="logo.png" alt="3D Factory" class="h-10 w-10 object-contain">
+                <div>
+                    <span class="text-xl font-black text-white">3D <span class="text-brand-cyan">FACTORY</span></span>
+                    <span class="text-xs block text-slate-400">Imprimimos tus diseños | 3D & Láser</span>
+                </div>
+            </div>
+
+            <div class="flex gap-6 text-lg">
+                <a href="#" class="hover:text-brand-cyan transition-colors" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                <a href="#" class="hover:text-brand-cyan transition-colors" aria-label="Facebook"><i class="fa-brands fa-facebook"></i></a>
+                <a href="https://wa.me/5215577981060" target="_blank" rel="noopener noreferrer" class="hover:text-brand-cyan transition-colors" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+            </div>
+            <div>
+                © <span id="currentYear"></span> 3D Factory. Todos los derechos reservados.
+            </div>
+        </div>
+    </footer>
+
+    <!-- LÓGICA JAVASCRIPT: THREE.JS + DXF + PDF + ESTIMADOR TIEMPO + WHATSAPP -->
+    <script>
+        const SPLITFORMS_ACCESS_KEY = "0cd17a4dcb8f4c7aaecfab1f20d1b463";
+        const MY_WHATSAPP_NUMBER = "5215577981060";
+
+        let currentFile = null;
+        let detectedVolumeCm3 = 0;
+        let detectedDimensions = "";
+        let detectedLaserAreaCm2 = 0;
+        let currentViewerType = "none";
+        let currentPdfBlobUrl = null;
+
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+        mobileMenuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // ==========================================
+        // 1. MOTOR 3D MULTI-FORMATO (THREE.JS)
+        // ==========================================
+        let scene, camera, renderer, controls, currentMesh, gridHelper;
+        let isWireframe = false;
+        let isAutoRotating = false;
+        const container = document.getElementById('viewerCanvasContainer');
+
+        function init3DViewer() {
+            if (renderer) return;
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x020617);
+
+            const width = container.clientWidth || 500;
+            const height = container.clientHeight || 320;
+
+            camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 5000);
+            camera.position.set(120, 100, 150);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x1e293b, 1.2);
+            scene.add(hemiLight);
+
+            const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.0);
+            dirLight1.position.set(200, 300, 200);
+            scene.add(dirLight1);
+
+            const dirLight2 = new THREE.DirectionalLight(0x06b6d4, 0.9);
+            dirLight2.position.set(-200, -100, -200);
+            scene.add(dirLight2);
+
+            const dirLight3 = new THREE.DirectionalLight(0xa855f7, 0.6);
+            dirLight3.position.set(0, 200, -200);
+            scene.add(dirLight3);
+
+            gridHelper = new THREE.GridHelper(200, 20, 0x06b6d4, 0x1e293b);
+            gridHelper.position.y = 0;
+            scene.add(gridHelper);
+
+            function animate() {
+                requestAnimationFrame(animate);
+                if (currentViewerType === '3d' && isAutoRotating && controls) {
+                    controls.autoRotate = true;
+                    controls.autoRotateSpeed = 2.0;
+                } else if (controls) {
+                    controls.autoRotate = false;
+                }
+                if (currentViewerType === '3d' && renderer && scene && camera) {
+                    controls.update();
+                    renderer.render(scene, camera);
+                }
+            }
+            animate();
+
+            const resizeObserver = new ResizeObserver(() => {
+                if (!container || !renderer) return;
+                const w = container.clientWidth;
+                const h = container.clientHeight;
+                if (w > 0 && h > 0) {
+                    camera.aspect = w / h;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(w, h);
+                    if (currentViewerType === 'dxf') redrawLaserDxf();
+                }
+            });
+            resizeObserver.observe(container);
+        }
+
+        function load3DFile(file, ext) {
+            currentViewerType = '3d';
+            showViewerElements('3d');
+
+            const spinner = document.getElementById('viewerLoadingSpinner');
+            document.getElementById('spinnerText').textContent = `Cargando modelo 3D (.${ext.toUpperCase()})...`;
+            document.getElementById('spinnerIcon').className = "fa-solid fa-circle-notch fa-spin text-3xl text-brand-cyan";
+            spinner.classList.remove('hidden');
+
+            init3DViewer();
+
+            setTimeout(() => {
+                const w = container.clientWidth;
+                const h = container.clientHeight;
+                if (w > 0 && h > 0) {
+                    camera.aspect = w / h;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(w, h);
+                }
+            }, 50);
+
+            const reader = new FileReader();
+
+            if (ext === 'obj') {
+                reader.readAsText(file);
+                reader.onload = function(e) {
+                    try {
+                        const loader = new THREE.OBJLoader();
+                        const obj = loader.parse(e.target.result);
+                        setupObject3DInScene(obj, `Modelo 3D (.OBJ)`);
+                    } catch (err) {
+                        handle3DError(err);
+                    } finally {
+                        spinner.classList.add('hidden');
+                    }
+                };
+            } else if (ext === '3mf') {
+                reader.readAsArrayBuffer(file);
+                reader.onload = function(e) {
+                    try {
+                        const loader = new THREE.ThreeMFLoader ? new THREE.ThreeMFLoader() : (THREE.ThreeMFLoader || new THREE.STLLoader());
+                        if (THREE.ThreeMFLoader) {
+                            const obj = loader.parse(e.target.result);
+                            setupObject3DInScene(obj, `Modelo 3D (.3MF)`);
+                        } else {
+                            throw new Error("Lector 3MF");
+                        }
+                    } catch (err) {
+                        handle3DError(err);
+                    } finally {
+                        spinner.classList.add('hidden');
+                    }
+                };
+            } else if (ext === 'glb' || ext === 'gltf') {
+                reader.readAsArrayBuffer(file);
+                reader.onload = function(e) {
+                    try {
+                        const loader = new THREE.GLTFLoader();
+                        loader.parse(e.target.result, '', function(gltf) {
+                            setupObject3DInScene(gltf.scene, `Modelo 3D (.${ext.toUpperCase()})`);
+                            spinner.classList.add('hidden');
+                        }, function(err) {
+                            handle3DError(err);
+                            spinner.classList.add('hidden');
+                        });
+                    } catch (err) {
+                        handle3DError(err);
+                        spinner.classList.add('hidden');
+                    }
+                };
+            } else {
+                reader.readAsArrayBuffer(file);
+                reader.onload = function(e) {
+                    try {
+                        const loader = new THREE.STLLoader();
+                        const geometry = loader.parse(e.target.result);
+                        geometry.computeVertexNormals();
+
+                        const material = new THREE.MeshStandardMaterial({
+                            color: 0x06b6d4,
+                            roughness: 0.35,
+                            metalness: 0.25,
+                            wireframe: isWireframe,
+                            side: THREE.DoubleSide
+                        });
+
+                        const mesh = new THREE.Mesh(geometry, material);
+                        setupObject3DInScene(mesh, `Visor 3D Interactivo (.STL)`, geometry);
+                    } catch (err) {
+                        handle3DError(err);
+                    } finally {
+                        spinner.classList.add('hidden');
+                    }
+                };
+            }
+        }
+
+        function setupObject3DInScene(object3D, titleText, optionalGeometry = null) {
+            if (currentMesh) {
+                scene.remove(currentMesh);
+            }
+
+            object3D.traverse(function(child) {
+                if (child.isMesh) {
+                    child.geometry.computeVertexNormals();
+                    if (!child.material || child.material.isMeshBasicMaterial) {
+                        child.material = new THREE.MeshStandardMaterial({
+                            color: 0x06b6d4,
+                            roughness: 0.35,
+                            metalness: 0.25,
+                            wireframe: isWireframe,
+                            side: THREE.DoubleSide
+                        });
+                    } else {
+                        child.material.side = THREE.DoubleSide;
+                    }
+                }
+            });
+
+            const box = new THREE.Box3().setFromObject(object3D);
+            const size = new THREE.Vector3();
+            box.getSize(size);
+            const center = new THREE.Vector3();
+            box.getCenter(center);
+
+            object3D.position.x -= center.x;
+            object3D.position.y -= center.y;
+            object3D.position.z -= center.z;
+
+            object3D.position.y += size.y / 2;
+            scene.add(object3D);
+            currentMesh = object3D;
+
+            const maxDim = Math.max(size.x, size.y, size.z) || 50;
+            const cameraDist = maxDim * 2.2;
+
+            camera.near = Math.max(0.1, maxDim / 100);
+            camera.far = Math.max(1000, cameraDist * 10);
+            camera.position.set(cameraDist * 0.9, cameraDist * 0.8, cameraDist);
+            camera.lookAt(0, size.y / 2, 0);
+            camera.updateProjectionMatrix();
+
+            controls.target.set(0, size.y / 2, 0);
+            controls.maxDistance = cameraDist * 5;
+            controls.update();
+
+            if (gridHelper) scene.remove(gridHelper);
+            const gridSize = Math.max(100, Math.ceil(maxDim * 2 / 50) * 50);
+            gridHelper = new THREE.GridHelper(gridSize, 20, 0x06b6d4, 0x1e293b);
+            gridHelper.position.y = 0;
+            scene.add(gridHelper);
+
+            detectedDimensions = `${size.x.toFixed(1)} x ${size.z.toFixed(1)} x ${size.y.toFixed(1)} mm`;
+            if (optionalGeometry) {
+                detectedVolumeCm3 = calculateSTLVolume(optionalGeometry);
+            } else {
+                detectedVolumeCm3 = (size.x * size.y * size.z * 0.45) / 1000;
+            }
+
+            document.getElementById('statDimensions').textContent = detectedDimensions;
+            document.getElementById('statDimensions').className = "font-bold text-brand-cyan text-xs";
+            document.getElementById('statVolumeLabel').textContent = "Volumen Aprox.";
+            document.getElementById('statVolume').textContent = `${detectedVolumeCm3.toFixed(2)} cm³`;
+            document.getElementById('viewerTitle').textContent = titleText;
+
+            recalculatePrice();
+        }
+
+        function handle3DError(err) {
+            console.error("Error al renderizar 3D:", err);
+            alert("El archivo se cargó, pero no se pudo generar la vista 3D en pantalla. Se enviará correctamente para su revisión técnica.");
+        }
+
+        function calculateSTLVolume(geometry) {
+            const pos = geometry.attributes.position;
+            let totalVolume = 0;
+
+            if (geometry.index) {
+                const idx = geometry.index.array;
+                for (let i = 0; i < idx.length; i += 3) {
+                    totalVolume += signedVolumeOfTriangle(
+                        pos.getX(idx[i]),   pos.getY(idx[i]),   pos.getZ(idx[i]),
+                        pos.getX(idx[i+1]), pos.getY(idx[i+1]), pos.getZ(idx[i+1]),
+                        pos.getX(idx[i+2]), pos.getY(idx[i+2]), pos.getZ(idx[i+2])
+                    );
+                }
+            } else {
+                const arr = pos.array;
+                for (let i = 0; i < arr.length; i += 9) {
+                    totalVolume += signedVolumeOfTriangle(
+                        arr[i],   arr[i+1], arr[i+2],
+                        arr[i+3], arr[i+4], arr[i+5],
+                        arr[i+6], arr[i+7], arr[i+8]
+                    );
+                }
+            }
+            return Math.abs(totalVolume) / 1000;
+        }
+
+        function signedVolumeOfTriangle(p1x, p1y, p1z, p2x, p2y, p2z, p3x, p3y, p3z) {
+            return (1.0 / 6.0) * (
+                -p3x * p2y * p1z +
+                 p2x * p3y * p1z +
+                 p3x * p1y * p2z -
+                 p1x * p3y * p2z -
+                 p2x * p1y * p3z +
+                 p1x * p2y * p3z
+            );
+        }
+
+        // ==========================================
+        // 2. MOTOR LÁSER 2D
+        // ==========================================
+        const laserCanvas = document.getElementById('laserCanvas');
+        let dxfParsedData = null;
+        let dxfScale = 1.0;
+        let dxfPanX = 0;
+        let dxfPanY = 0;
+        let isDxfDragging = false;
+        let dxfLastX = 0, dxfLastY = 0;
+
+        function loadDXFFile(file) {
+            currentViewerType = 'dxf';
+            showViewerElements('dxf');
+
+            const spinner = document.getElementById('viewerLoadingSpinner');
+            document.getElementById('spinnerText').textContent = 'Analizando plano de corte DXF...';
+            document.getElementById('spinnerIcon').className = "fa-solid fa-circle-notch fa-spin text-3xl text-brand-laser";
+            spinner.classList.remove('hidden');
+
+            const reader = new FileReader();
+            reader.readAsText(file);
+            reader.onload = function(e) {
+                try {
+                    const text = e.target.result;
+                    let parsedDxf = null;
+
+                    if (window.DxfParser) {
+                        const parser = new window.DxfParser();
+                        parsedDxf = parser.parseSync(text);
+                    } else {
+                        parsedDxf = parseSimpleDxfFallback(text);
+                    }
+
+                    if (!parsedDxf || !parsedDxf.entities || parsedDxf.entities.length === 0) {
+                        throw new Error("Sin entidades vectoriales.");
+                    }
+
+                    dxfParsedData = parsedDxf;
+                    resetDxfView();
+                    redrawLaserDxf();
+                } catch (err) {
+                    console.error("Error al procesar DXF:", err);
+                    alert("No se pudo dibujar el plano DXF. Verifica que esté en formato ASCII estándar.");
+                } finally {
+                    spinner.classList.add('hidden');
+                }
+            };
+        }
+
+        function parseSimpleDxfFallback(text) {
+            const lines = text.split(/\r?\n/);
+            const entities = [];
+            let currentEntity = null;
+
+            for (let i = 0; i < lines.length - 1; i += 2) {
+                const code = parseInt(lines[i].trim(), 10);
+                const val = lines[i+1].trim();
+
+                if (code === 0) {
+                    if (currentEntity) entities.push(currentEntity);
+                    if (['LINE', 'CIRCLE', 'ARC', 'LWPOLYLINE'].includes(val)) {
+                        currentEntity = { type: val, vertices: [] };
+                    } else {
+                        currentEntity = null;
+                    }
+                } else if (currentEntity) {
+                    if (code === 10) currentEntity.x1 = parseFloat(val);
+                    if (code === 20) currentEntity.y1 = parseFloat(val);
+                    if (code === 11) currentEntity.x2 = parseFloat(val);
+                    if (code === 21) currentEntity.y2 = parseFloat(val);
+                    if (code === 40) currentEntity.radius = parseFloat(val);
+                }
+            }
+            if (currentEntity) entities.push(currentEntity);
+            return { entities };
+        }
+
+        function resetDxfView() {
+            if (!dxfParsedData) return;
+            const bounds = getDxfBounds(dxfParsedData);
+            const w = laserCanvas.clientWidth || 500;
+            const h = laserCanvas.clientHeight || 320;
+
+            laserCanvas.width = w * window.devicePixelRatio;
+            laserCanvas.height = h * window.devicePixelRatio;
+
+            const dxfW = bounds.maxX - bounds.minX;
+            const dxfH = bounds.maxY - bounds.minY;
+
+            const scaleX = (w - 60) / (dxfW || 1);
+            const scaleY = (h - 60) / (dxfH || 1);
+            dxfScale = Math.min(scaleX, scaleY);
+
+            dxfPanX = (w - dxfW * dxfScale) / 2 - bounds.minX * dxfScale;
+            dxfPanY = (h - dxfH * dxfScale) / 2 + bounds.maxY * dxfScale;
+
+            const widthMm = dxfW;
+            const heightMm = dxfH;
+            const areaCm2 = ((widthMm / 10) * (heightMm / 10));
+
+            detectedDimensions = `${widthMm.toFixed(1)} x ${heightMm.toFixed(1)} mm`;
+            detectedLaserAreaCm2 = areaCm2;
+
+            document.getElementById('statDimensions').textContent = detectedDimensions;
+            document.getElementById('statDimensions').className = "font-bold text-brand-laser text-xs";
+            document.getElementById('statVolumeLabel').textContent = "Área de Placa";
+            document.getElementById('statVolume').textContent = `${areaCm2.toFixed(1)} cm²`;
+            document.getElementById('viewerTitle').textContent = 'Plano de Corte Láser (.DXF)';
+
+            document.getElementById('dimensionsLaser').value = `${(widthMm/10).toFixed(1)} x ${(heightMm/10).toFixed(1)} cm`;
+            recalculatePrice();
+        }
+
+        function getDxfBounds(dxf) {
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+            function expand(x, y) {
+                if (isNaN(x) || isNaN(y)) return;
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            }
+
+            dxf.entities.forEach(ent => {
+                if (ent.type === 'LINE') {
+                    if (ent.vertices) {
+                        expand(ent.vertices[0].x, ent.vertices[0].y);
+                        expand(ent.vertices[1].x, ent.vertices[1].y);
+                    } else if (ent.x1 !== undefined) {
+                        expand(ent.x1, ent.y1);
+                        expand(ent.x2, ent.y2);
+                    }
+                } else if (ent.type === 'LWPOLYLINE' || ent.type === 'POLYLINE') {
+                    if (ent.vertices) ent.vertices.forEach(v => expand(v.x, v.y));
+                } else if (ent.type === 'CIRCLE' || ent.type === 'ARC') {
+                    const cx = ent.center ? ent.center.x : (ent.x1 || 0);
+                    const cy = ent.center ? ent.center.y : (ent.y1 || 0);
+                    const r = ent.radius || 0;
+                    expand(cx - r, cy - r);
+                    expand(cx + r, cy + r);
+                }
+            });
+
+            if (minX === Infinity) {
+                minX = 0; minY = 0; maxX = 100; maxY = 100;
+            }
+            return { minX, minY, maxX, maxY };
+        }
+
+        function redrawLaserDxf() {
+            if (!dxfParsedData) return;
+            const ctx = laserCanvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const w = laserCanvas.width / dpr;
+            const h = laserCanvas.height / dpr;
+
+            ctx.save();
+            ctx.scale(dpr, dpr);
+            ctx.clearRect(0, 0, w, h);
+
+            ctx.fillStyle = "#020617";
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.strokeStyle = "rgba(249, 115, 22, 0.08)";
+            ctx.lineWidth = 1;
+            const step = 20;
+            for (let x = 0; x < w; x += step) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0); ctx.lineTo(x, h);
+                ctx.stroke();
+            }
+            for (let y = 0; y < h; y += step) {
+                ctx.beginPath();
+                ctx.moveTo(0, y); ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+
+            ctx.strokeStyle = "#f97316";
+            ctx.shadowColor = "#f97316";
+            ctx.shadowBlur = 6;
+            ctx.lineWidth = 1.6;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+
+            function toScreenX(x) { return x * dxfScale + dxfPanX; }
+            function toScreenY(y) { return -y * dxfScale + dxfPanY; }
+
+            dxfParsedData.entities.forEach(ent => {
+                ctx.beginPath();
+                if (ent.type === 'LINE') {
+                    const x1 = ent.vertices ? ent.vertices[0].x : ent.x1;
+                    const y1 = ent.vertices ? ent.vertices[0].y : ent.y1;
+                    const x2 = ent.vertices ? ent.vertices[1].x : ent.x2;
+                    const y2 = ent.vertices ? ent.vertices[1].y : ent.y2;
+                    ctx.moveTo(toScreenX(x1), toScreenY(y1));
+                    ctx.lineTo(toScreenX(x2), toScreenY(y2));
+                    ctx.stroke();
+                } else if (ent.type === 'LWPOLYLINE' || ent.type === 'POLYLINE') {
+                    if (ent.vertices && ent.vertices.length > 1) {
+                        ctx.moveTo(toScreenX(ent.vertices[0].x), toScreenY(ent.vertices[0].y));
+                        for (let i = 1; i < ent.vertices.length; i++) {
+                            ctx.lineTo(toScreenX(ent.vertices[i].x), toScreenY(ent.vertices[i].y));
+                        }
+                        if (ent.shape) ctx.closePath();
+                        ctx.stroke();
+                    }
+                } else if (ent.type === 'CIRCLE') {
+                    const cx = ent.center ? ent.center.x : (ent.x1 || 0);
+                    const cy = ent.center ? ent.center.y : (ent.y1 || 0);
+                    const r = ent.radius || 0;
+                    ctx.arc(toScreenX(cx), toScreenY(cy), r * dxfScale, 0, 2 * Math.PI);
+                    ctx.stroke();
+                } else if (ent.type === 'ARC') {
+                    const cx = ent.center ? ent.center.x : (ent.x1 || 0);
+                    const cy = ent.center ? ent.center.y : (ent.y1 || 0);
+                    const r = ent.radius || 0;
+                    const startAngle = ent.startAngle !== undefined ? ent.startAngle : 0;
+                    const endAngle = ent.endAngle !== undefined ? ent.endAngle : Math.PI;
+                    ctx.arc(toScreenX(cx), toScreenY(cy), r * dxfScale, -startAngle, -endAngle, true);
+                    ctx.stroke();
+                }
+            });
+
+            ctx.restore();
+        }
+
+        laserCanvas.addEventListener('mousedown', (e) => {
+            isDxfDragging = true;
+            dxfLastX = e.clientX;
+            dxfLastY = e.clientY;
+        });
+
+        window.addEventListener('mouseup', () => { isDxfDragging = false; });
+
+        laserCanvas.addEventListener('mousemove', (e) => {
+            if (!isDxfDragging || currentViewerType !== 'dxf') return;
+            const dx = e.clientX - dxfLastX;
+            const dy = e.clientY - dxfLastY;
+            dxfPanX += dx;
+            dxfPanY += dy;
+            dxfLastX = e.clientX;
+            dxfLastY = e.clientY;
+            redrawLaserDxf();
+        });
+
+        laserCanvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            if (currentViewerType !== 'dxf') return;
+            const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+            dxfScale *= zoomFactor;
+            redrawLaserDxf();
+        });
+
+        // 3. VISOR DE PDF VECTORIAL
+        function loadPDFPreview(file) {
+            currentViewerType = 'pdf';
+            showViewerElements('pdf');
+
+            if (currentPdfBlobUrl) {
+                URL.revokeObjectURL(currentPdfBlobUrl);
+            }
+
+            currentPdfBlobUrl = URL.createObjectURL(file);
+            const pdfFrame = document.getElementById('pdfFrame');
+            pdfFrame.src = `${currentPdfBlobUrl}#toolbar=0&navpanes=0&view=Fit`;
+
+            document.getElementById('viewerTitle').textContent = 'Plano Vectorial Láser (.PDF)';
+            document.getElementById('statDimensions').textContent = "Vector PDF";
+            document.getElementById('statDimensions').className = "font-bold text-brand-laser text-xs";
+            document.getElementById('statVolumeLabel').textContent = "Formato";
+            document.getElementById('statVolume').textContent = "Documento CAD";
+            document.getElementById('statHelpText').textContent = "Visor interactivo de plano PDF";
+        }
+
+        function loadSVGPreview(file) {
+            currentViewerType = 'svg';
+            showViewerElements('svg');
+
+            const reader = new FileReader();
+            reader.readAsText(file);
+            reader.onload = function(e) {
+                const svgCont = document.getElementById('svgContainer');
+                svgCont.innerHTML = e.target.result;
+                const svgElement = svgCont.querySelector('svg');
+                if (svgElement) {
+                    svgElement.style.maxWidth = '90%';
+                    svgElement.style.maxHeight = '240px';
+
+                    const viewBox = svgElement.viewBox.baseVal;
+                    if (viewBox && viewBox.width > 0) {
+                        detectedDimensions = `${viewBox.width.toFixed(0)} x ${viewBox.height.toFixed(0)} px`;
+                        document.getElementById('statDimensions').textContent = detectedDimensions;
+                    }
+                }
+
+                document.getElementById('viewerTitle').textContent = 'Plano de Corte Láser (.SVG)';
+                document.getElementById('statVolumeLabel').textContent = "Modo";
+                document.getElementById('statVolume').textContent = "Vector Láser";
+                document.getElementById('statDimensions').className = "font-bold text-brand-laser text-xs";
+            };
+        }
+
+        function loadImagePreview(file) {
+            currentViewerType = 'image';
+            showViewerElements('image');
+
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function(e) {
+                const img = document.getElementById('laserImgPreview');
+                img.src = e.target.result;
+                img.onload = function() {
+                    detectedDimensions = `${img.naturalWidth} x ${img.naturalHeight} px`;
+                    document.getElementById('statDimensions').textContent = detectedDimensions;
+                    document.getElementById('statDimensions').className = "font-bold text-brand-laser text-xs";
+                    document.getElementById('statVolumeLabel').textContent = "Tipo";
+                    document.getElementById('statVolume').textContent = "Grabado Superficial";
+                };
+                document.getElementById('viewerTitle').textContent = 'Vista de Grabado Láser (Imagen)';
+            };
+        }
+
+        function showViewerElements(type) {
+            document.getElementById('viewerWrapper').classList.remove('hidden');
+
+            const canvas3D = renderer ? renderer.domElement : null;
+            const canvas2D = document.getElementById('laserCanvas');
+            const svgCont = document.getElementById('svgContainer');
+            const pdfCont = document.getElementById('pdfContainer');
+            const imgCont = document.getElementById('imgContainer');
+            const controls3D = document.getElementById('controls3DGroup');
+            const floatingZoom = document.getElementById('floatingZoomButtons');
+
+            if (canvas3D) canvas3D.style.display = (type === '3d') ? 'block' : 'none';
+            canvas2D.style.display = (type === 'dxf') ? 'block' : 'none';
+            svgCont.style.display = (type === 'svg') ? 'flex' : 'none';
+            pdfCont.style.display = (type === 'pdf') ? 'flex' : 'none';
+            imgCont.style.display = (type === 'image') ? 'flex' : 'none';
+
+            floatingZoom.style.display = (type === 'pdf') ? 'none' : 'flex';
+
+            if (type === '3d') {
+                controls3D.classList.remove('hidden');
+                document.getElementById('filePreviewIcon').innerHTML = '<i class="fa-solid fa-cube text-brand-cyan"></i>';
+            } else {
+                controls3D.classList.add('hidden');
+                document.getElementById('filePreviewIcon').innerHTML = '<i class="fa-solid fa-wand-magic-sparkles text-brand-laser"></i>';
+            }
+        }
+
+        // ==========================================
+        // CONTROLES DE ZOOM UNIVERSALES (+ / -)
+        // ==========================================
+        function zoomInUniversal() {
+            if (currentViewerType === '3d') {
+                zoomIn3D();
+            } else if (currentViewerType === 'dxf') {
+                dxfScale *= 1.25;
+                redrawLaserDxf();
+            }
+        }
+
+        function zoomOutUniversal() {
+            if (currentViewerType === '3d') {
+                zoomOut3D();
+            } else if (currentViewerType === 'dxf') {
+                dxfScale *= 0.8;
+                redrawLaserDxf();
+            }
+        }
+
+        function resetUniversalView() {
+            if (currentViewerType === '3d') {
+                reset3DCamera();
+            } else if (currentViewerType === 'dxf') {
+                resetDxfView();
+                redrawLaserDxf();
+            }
+        }
+
+        function zoomIn3D() {
+            if (!camera || !controls) return;
+            const offset = camera.position.clone().sub(controls.target);
+            if (offset.length() > 5) {
+                offset.multiplyScalar(0.8);
+                camera.position.copy(controls.target).add(offset);
+                controls.update();
+            }
+        }
+
+        function zoomOut3D() {
+            if (!camera || !controls) return;
+            const offset = camera.position.clone().sub(controls.target);
+            if (offset.length() < 12000) {
+                offset.multiplyScalar(1.25);
+                camera.position.copy(controls.target).add(offset);
+                controls.update();
+            }
+        }
+
+        function toggleWireframe() {
+            if (!currentMesh) return;
+            isWireframe = !isWireframe;
+            currentMesh.traverse(function(child) {
+                if (child.isMesh && child.material) {
+                    child.material.wireframe = isWireframe;
+                }
+            });
+        }
+
+        function toggleAutoRotate() {
+            isAutoRotating = !isAutoRotating;
+            const btn = document.getElementById('btnAutoRotate');
+            if (isAutoRotating) {
+                btn.classList.add('bg-cyan-950', 'text-brand-cyan', 'border-brand-cyan');
+            } else {
+                btn.classList.remove('bg-cyan-950', 'text-brand-cyan', 'border-brand-cyan');
+            }
+        }
+
+        function reset3DCamera() {
+            if (!currentMesh || !controls) return;
+            const box = new THREE.Box3().setFromObject(currentMesh);
+            const size = new THREE.Vector3();
+            box.getSize(size);
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const cameraDist = maxDim * 2.2;
+            camera.position.set(cameraDist * 0.9, cameraDist * 0.8, cameraDist);
+            controls.target.set(0, size.y / 2, 0);
+            controls.update();
+        }
+
+        // ==========================================
+        // PROCESAMIENTO Y LIMPIEZA TOTAL
+        // ==========================================
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-brand-cyan', 'bg-cyan-950/20');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-brand-cyan', 'bg-cyan-950/20');
+            }, false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                processFile(files[0]);
+            }
+        });
+
+        function handleFileSelect(e) {
+            if (e.target.files.length > 0) {
+                processFile(e.target.files[0]);
+            }
+        }
+
+        function processFile(file) {
+            currentFile = file;
+            document.getElementById('dropZonePrompt').classList.add('hidden');
+            document.getElementById('filePreview').classList.remove('hidden');
+            
+            document.getElementById('fileName').textContent = file.name;
+            const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+            document.getElementById('fileSize').textContent = `${sizeInMB} MB - Listo para procesar`;
+
+            const fileNameLower = file.name.toLowerCase();
+            const ext = fileNameLower.split('.').pop();
+
+            if (['stl', 'obj', '3mf', 'glb', 'gltf'].includes(ext)) {
+                load3DFile(file, ext);
+            } else if (ext === 'dxf') {
+                loadDXFFile(file);
+            } else if (ext === 'svg') {
+                loadSVGPreview(file);
+            } else if (ext === 'pdf') {
+                loadPDFPreview(file);
+            } else if (['png', 'jpg', 'jpeg', 'webp', 'bmp'].includes(ext)) {
+                loadImagePreview(file);
+            } else {
+                document.getElementById('viewerWrapper').classList.add('hidden');
+            }
+
+            recalculatePrice();
+        }
+
+        function removeSelectedFile(e) {
+            if (e && e.stopPropagation) e.stopPropagation();
+            currentFile = null;
+            detectedVolumeCm3 = 0;
+            detectedDimensions = "";
+            detectedLaserAreaCm2 = 0;
+            currentViewerType = "none";
+            dxfParsedData = null;
+            fileInput.value = "";
+
+            if (currentPdfBlobUrl) {
+                URL.revokeObjectURL(currentPdfBlobUrl);
+                currentPdfBlobUrl = null;
+                document.getElementById('pdfFrame').src = "";
+            }
+
+            document.getElementById('svgContainer').innerHTML = "";
+            document.getElementById('laserImgPreview').src = "";
+            if (laserCanvas) {
+                const ctx = laserCanvas.getContext('2d');
+                ctx.clearRect(0, 0, laserCanvas.width, laserCanvas.height);
+            }
+
+            if (currentMesh && scene) {
+                scene.remove(currentMesh);
+                currentMesh = null;
+            }
+
+            document.getElementById('dropZonePrompt').classList.remove('hidden');
+            document.getElementById('filePreview').classList.add('hidden');
+            document.getElementById('viewerWrapper').classList.add('hidden');
+
+            document.getElementById('dimensionsLaser').value = "";
+            document.getElementById('statDimensions').textContent = "-- x -- mm";
+            document.getElementById('statVolume').textContent = "--";
+
+            recalculatePrice();
+        }
+
+        function updateServiceUI() {
+            if (currentFile) {
+                removeSelectedFile();
+            }
+
+            const service = document.querySelector('input[name="servicio"]:checked').value;
+            const p3D = document.getElementById('params3D');
+            const pLaser = document.getElementById('paramsLaser');
+            const hint = document.getElementById('fileFormatHint');
+
+            if (service === 'Impresion 3D FDM') {
+                p3D.classList.remove('hidden');
+                pLaser.classList.add('hidden');
+                fileInput.accept = ".stl,.obj,.3mf,.step,.stp,.glb,.gltf";
+                hint.textContent = "Archivos 3D admitidos: .STL, .OBJ, .3MF, .GLB, .GLTF, .STEP (Hasta 100 MB)";
+            } else {
+                p3D.classList.add('hidden');
+                pLaser.classList.remove('hidden');
+                fileInput.accept = ".dxf,.svg,.pdf,.ai,.png,.jpg,.jpeg,.webp";
+                hint.textContent = "Archivos Láser admitidos: .DXF, .SVG, .PDF, .AI, .PNG, .JPG (Hasta 100 MB)";
+            }
+            recalculatePrice();
+        }
+
+        function updateLaserModeUI() {
+            const mode = document.querySelector('input[name="laserMode"]:checked')?.value || "Solo Corte";
+            const colorBox = document.getElementById('laserColorGuideBox');
+
+            if (mode === 'Corte y Grabado') {
+                colorBox.classList.remove('hidden');
+            } else {
+                colorBox.classList.add('hidden');
+            }
+            recalculatePrice();
+        }
+
+        function recalculatePrice() {
+            const service = document.querySelector('input[name="servicio"]:checked').value;
+            const qty = parseInt(document.getElementById('quantity').value) || 1;
+            let base = 60;
+
+            const deliveryEl = document.getElementById('deliveryEstimate');
+            if (deliveryEl) {
+                if (qty <= 5) {
+                    deliveryEl.textContent = "24 a 48 horas (Producción Express)";
+                    deliveryEl.className = "text-emerald-400 font-bold";
+                } else if (qty <= 20) {
+                    deliveryEl.textContent = "2 a 3 días hábiles (Lote chico)";
+                    deliveryEl.className = "text-amber-400 font-bold";
+                } else {
+                    deliveryEl.textContent = "4 a 6 días hábiles (Producción en serie)";
+                    deliveryEl.className = "text-cyan-400 font-bold";
+                }
+            }
+
+            if (service === 'Impresion 3D FDM') {
+                const matRate = parseFloat(document.getElementById('material3D').selectedOptions[0].dataset.price);
+                if (detectedVolumeCm3 > 0) {
+                    const estimatedGrams = detectedVolumeCm3 * 1.24 * 0.45;
+                    base = 40 + (estimatedGrams * 2.2 * (matRate * 10));
+                } else {
+                    base += (matRate * 250);
+                }
+            } else {
+                const laserFactor = parseFloat(document.getElementById('materialLaser').selectedOptions[0].dataset.factor);
+                const laserMode = document.querySelector('input[name="laserMode"]:checked')?.value || "Solo Corte";
+                
+                let area = detectedLaserAreaCm2;
+                if (!area || area <= 0) {
+                    const dims = document.getElementById('dimensionsLaser').value.toLowerCase().split('x');
+                    if (dims.length === 2) {
+                        const w = parseFloat(dims[0]) || 10;
+                        const h = parseFloat(dims[1]) || 10;
+                        area = w * h;
+                    } else {
+                        area = 100;
+                    }
+                }
+
+                let modeMultiplier = 1.0;
+                if (laserMode === 'Corte y Grabado') {
+                    modeMultiplier = 1.35;
+                } else if (laserMode === 'Solo Grabado') {
+                    modeMultiplier = 1.10;
+                }
+
+                base = (45 + ((area / 100) * laserFactor * 32)) * modeMultiplier;
+            }
+
+            const total = (base * qty).toFixed(2);
+            document.getElementById('calculatedPrice').textContent = total;
+        }
+
+        // ==========================================
+        // ENVÍO VÍA SPLITFORMS
+        // ==========================================
+        async function sendViaSplitForms() {
+            const clientName = document.getElementById('clientName').value.trim();
+            const clientEmail = document.getElementById('clientEmail').value.trim();
+            const statusMsg = document.getElementById('statusMessage');
+            const btnSubmit = document.getElementById('btnSubmitEmail');
+
+            if (!clientName) {
+                alert("Por favor ingresa tu nombre completo.");
+                document.getElementById('clientName').focus();
+                return;
+            }
+            if (!clientEmail || !clientEmail.includes('@')) {
+                alert("Por favor ingresa un correo electrónico válido.");
+                document.getElementById('clientEmail').focus();
+                return;
+            }
+
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Procesando archivo y cotización...`;
+            statusMsg.className = "p-4 rounded-xl text-sm font-semibold text-center bg-cyan-950/60 border border-cyan-500/40 text-cyan-300 block";
+            statusMsg.textContent = "Preparando cotización...";
+
+            let fileDownloadUrl = "No se adjuntó archivo";
+            let fileName = "Ninguno";
+            let fileSize = "0 MB";
+
+            if (currentFile) {
+                statusMsg.textContent = `Subiendo archivo "${currentFile.name}" a la nube...`;
+                fileName = currentFile.name;
+                fileSize = `${(currentFile.size / (1024 * 1024)).toFixed(2)} MB`;
+
+                try {
+                    const uploadFormData = new FormData();
+                    uploadFormData.append('file', currentFile);
+
+                    const uploadResponse = await fetch("https://tmpfiles.org/api/v1/upload", {
+                        method: "POST",
+                        body: uploadFormData
+                    });
+                    const uploadResult = await uploadResponse.json();
+
+                    if (uploadResult && uploadResult.data && uploadResult.data.url) {
+                        fileDownloadUrl = uploadResult.data.url.replace("tmpfiles.org/", "tmpfiles.org/dl/");
+                    }
+                } catch (err) {
+                    console.warn("Aviso: el archivo se enviará como referencia de texto:", err);
+                    fileDownloadUrl = "Pendiente de envío por WhatsApp";
+                }
+            }
+
+            statusMsg.textContent = "Enviando cotización a tu correo con SplitForms...";
+
+            const service = document.querySelector('input[name="servicio"]:checked').value;
+            const qty = document.getElementById('quantity').value;
+            const phone = document.getElementById('clientPhone').value || "No especificado";
+            const notes = document.getElementById('projectNotes').value || "Sin notas adicionales";
+            const price = document.getElementById('calculatedPrice').textContent;
+            const delivery = document.getElementById('deliveryEstimate')?.textContent || "24-48 hrs";
+
+            let technicalSpecs = "";
+            if (service === 'Impresion 3D FDM') {
+                const mat = document.getElementById('material3D').value;
+                const infill = document.getElementById('infill3D').value;
+                technicalSpecs = `Material: ${mat} | Relleno: ${infill}`;
+                if (detectedDimensions) technicalSpecs += ` | Medidas 3D: ${detectedDimensions}`;
+                if (detectedVolumeCm3 > 0) technicalSpecs += ` | Volumen: ${detectedVolumeCm3.toFixed(2)} cm³`;
+            } else {
+                const mat = document.getElementById('materialLaser').value;
+                const dims = document.getElementById('dimensionsLaser').value || "No especificadas";
+                const laserMode = document.querySelector('input[name="laserMode"]:checked')?.value || "Solo Corte";
+                const colorNotes = document.getElementById('laserColorNotes')?.value || "";
+
+                technicalSpecs = `Material: ${mat} | Modalidad: ${laserMode} | Medidas Láser: ${dims}`;
+                if (detectedLaserAreaCm2 > 0) technicalSpecs += ` | Área: ${detectedLaserAreaCm2.toFixed(1)} cm²`;
+                if (colorNotes) technicalSpecs += ` | Especificación Corte vs Grabado: ${colorNotes}`;
+            }
+
+            const payload = {
+                access_key: SPLITFORMS_ACCESS_KEY,
+                subject: `Nueva Cotización de ${clientName} - 3D Factory`,
+                name: clientName,
+                email: clientEmail,
+                telefono: phone,
+                servicio: service,
+                especificaciones_tecnicas: technicalSpecs,
+                cantidad: qty,
+                tiempo_entrega_estimado: delivery,
+                presupuesto_estimado: `$${price} MXN`,
+                archivo_nombre: fileName,
+                archivo_peso: fileSize,
+                DESCARGAR_ARCHIVO_DISENO: fileDownloadUrl,
+                notas_cliente: notes
+            };
+
+            try {
+                const response = await fetch("https://splitforms.com/api/submit", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success !== false) {
+                    statusMsg.className = "p-4 rounded-xl text-sm font-semibold text-center bg-emerald-950/60 border border-emerald-500 text-emerald-300 block";
+                    statusMsg.innerHTML = `<i class="fa-solid fa-circle-check mr-2"></i> ¡Cotización y archivo procesados con éxito! Te contactaremos a <strong>${clientEmail}</strong> a la brevedad.`;
+                    
+                    document.getElementById('quoteForm').reset();
+                    removeSelectedFile({ stopPropagation: () => {} });
+                } else {
+                    throw new Error(result.message || "Error al procesar en SplitForms.");
+                }
+            } catch (error) {
+                statusMsg.className = "p-4 rounded-xl text-sm font-semibold text-center bg-red-950/60 border border-red-500 text-red-300 block";
+                statusMsg.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-2"></i> No se pudo procesar: ${error.message}. Por favor intenta por WhatsApp.`;
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Enviar por Correo con Archivo`;
+            }
+        }
+
+        // ==========================================
+        // ENVÍO VÍA WHATSAPP
+        // ==========================================
+        function sendViaWhatsApp() {
+            const clientName = document.getElementById('clientName').value.trim();
+            if (!clientName) {
+                alert("Por favor ingresa tu nombre completo.");
+                document.getElementById('clientName').focus();
+                return;
+            }
+
+            const service = document.querySelector('input[name="servicio"]:checked').value;
+            const quantity = document.getElementById('quantity').value;
+            const notes = document.getElementById('projectNotes').value || "Sin especificaciones adicionales";
+            const price = document.getElementById('calculatedPrice').textContent;
+            const email = document.getElementById('clientEmail').value || "No especificado";
+            const delivery = document.getElementById('deliveryEstimate')?.textContent || "24-48 hrs";
+
+            let fileDetails = "⚠️ *Sin archivo cargado aún (enviar por este chat)*";
+            if (currentFile) {
+                const mb = (currentFile.size / (1024 * 1024)).toFixed(2);
+                fileDetails = `📁 *Archivo:* ${currentFile.name} (${mb} MB)`;
+                if (detectedDimensions) fileDetails += `%0A📏 *Medidas:* ${detectedDimensions}`;
+            }
+
+            let serviceInfo = "";
+            if (service === 'Impresion 3D FDM') {
+                const mat = document.getElementById('material3D').value;
+                const infill = document.getElementById('infill3D').value;
+                serviceInfo = `⚙️ *Servicio:* Impresión 3D FDM%0A• Material: ${mat}%0A• Relleno: ${infill}`;
+            } else {
+                const mat = document.getElementById('materialLaser').value;
+                const dims = document.getElementById('dimensionsLaser').value || "No especificadas";
+                const laserMode = document.querySelector('input[name="laserMode"]:checked')?.value || "Solo Corte";
+                const colorNotes = document.getElementById('laserColorNotes')?.value || "";
+
+                serviceInfo = `🔥 *Servicio:* Corte/Grabado Láser%0A• Modalidad: *${laserMode}*%0A• Material: ${mat}%0A• Dimensiones: ${dims}`;
+                if (colorNotes) {
+                    serviceInfo += `%0A🎨 *Corte vs Grabado (Colores):* ${encodeURIComponent(colorNotes)}`;
+                }
+            }
+
+            const message = `¡Hola 3D Factory! Quiero cotizar un trabajo:%0A%0A` +
+                `👤 *Cliente:* ${encodeURIComponent(clientName)}%0A` +
+                `✉️ *Correo:* ${encodeURIComponent(email)}%0A` +
+                `${serviceInfo}%0A` +
+                `🔢 *Cantidad:* ${quantity} pieza(s)%0A` +
+                `⏱️ *Tiempo estimado:* ${encodeURIComponent(delivery)}%0A` +
+                `${fileDetails}%0A` +
+                `💵 *Presupuesto estimado:* $${price} MXN%0A` +
+                `📝 *Notas:* ${encodeURIComponent(notes)}%0A%0A` +
+                `*(A continuación adjunto mi archivo en este chat para su revisión técnica)*`;
+
+            const waURL = `https://wa.me/${MY_WHATSAPP_NUMBER}?text=${message}`;
+            window.open(waURL, '_blank');
+
+            if (currentFile) {
+                alert(`¡Listo! Se abrió WhatsApp con tu cotización.\n\nRecuerda adjuntar tu archivo (${currentFile.name}) en el chat que se acaba de abrir.`);
+            }
+        }
+
+        updateServiceUI();
+        recalculatePrice();
+    </script>
+</body>
+</html>
